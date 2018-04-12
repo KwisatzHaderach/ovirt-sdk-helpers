@@ -2,7 +2,7 @@ import logging
 
 import ovirtsdk4
 
-import config
+from . import config
 
 logging.basicConfig(level=logging.DEBUG, filename='base.log')
 logger = logging.getLogger(__name__)
