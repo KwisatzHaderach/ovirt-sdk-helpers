@@ -1,4 +1,4 @@
-from  ovirt_sdk_helpers import connection
+from ovirt_sdk_helpers import connection
 
 
 class TestConnection:

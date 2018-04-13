@@ -41,4 +41,5 @@ def destroy():
     global _CON
     _CON.close()
 
+
 atexit.register(destroy)
