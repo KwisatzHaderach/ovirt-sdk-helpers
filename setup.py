@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
 setup(
     name='ovirt-sdk-helpers',
@@ -8,7 +8,7 @@ setup(
     author='Petr Matyas',
     author_email='p.matyas13@gmail.com',
     license='Apache License 2.0',
-    packages=['ovirt_sdk_helpers'],
+    packages=find_packages(),
     install_requires=['ovirt-engine-sdk-python'],
     zip_safe=False
 )
