@@ -16,17 +16,31 @@ def service():
     return osh.connection.system_service().hosts_service()
 
 
-def get_obj_by_name(host_name):
+def get_obj_by_name(host_name, **kwargs):
     """
     Get host object by name
 
     Args:
         host_name (str): name of the host
+        kwargs (dict): keyword arguments for list method
 
     Returns:
         ovirtsdk4.types.Host: host object
     """
-    return service().list(search="name={}".format(host_name))[0]
+    return service().list(search="name={}".format(host_name), **kwargs)[0]
+
+
+def get_obj_list(**kwargs):
+    """
+    Get list of all host objects
+
+    Args:
+        kwargs (dict): keyword arguments for list method
+
+    Returns:
+        list(obj): list of all host objects
+    """
+    return service().list(**kwargs)
 
 
 def host_service(host_name):
