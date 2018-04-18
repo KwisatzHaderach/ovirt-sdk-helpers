@@ -5,41 +5,59 @@ import ovirtsdk4
 
 from . import config
 
-_CON = None
+# Singleton for connection
+con = None
 
 logging.basicConfig(level=logging.DEBUG, filename='base.log')
 logger = logging.getLogger(__name__)
 
 
-def create(
+def init(
     url=config.ENGINE_API_URL,
     username=config.USERNAME,
-    password=config.PASSWORD
+    password=config.PASSWORD,
+    **kwargs
 ):
     """
-    Create a connection
+    Create connection to engine
 
     Args:
-        url (str): ovirt engine url
+        url (str): oVirt engine URL
         username (str): username@domain to log in
         password (str): password for the user to log in
     """
-    global _CON
-    if _CON:
+    global con
+    if con:
         return
-    _CON = ovirtsdk4.Connection(
+    con = ovirtsdk4.Connection(
         url=url,
         username=username,
         password=password,
         insecure=True,
         debug=True,
         log=logger,
+        **kwargs
     )
 
 
+def system_service(*args, **kwargs):
+    """
+    Get system_service from connection object
+
+    Returns:
+        obj: system_service object
+    """
+    global con
+    return con.system_service(*args, **kwargs)
+
+
 def destroy():
-    global _CON
-    _CON.close()
+    """
+    Destroy connection to engine
+    """
+    global con
+    con.close()
+    con = None
 
 
 atexit.register(destroy)
