@@ -3,44 +3,46 @@ import logging
 
 import ovirtsdk4
 
-engine_api_url = "https://fqdn/ovirt-engine/api"
-username = "admin@internal"
-password = None
-
 # Singleton for connection
 con = None
 
-logging.basicConfig(level=logging.DEBUG, filename='base.log')
+logging.basicConfig(
+    level=logging.DEBUG, filename='ovirt_sdk_helper.log'
+)
 logger = logging.getLogger(__name__)
 
+con_params = {
+    'url': "https://fqdn/ovirt-engine/api",
+    'username': "admin@internal",
+    'password': None,
+    'insecure': False,
+    'debug': True,
+    'log': logger
+}
 
-def init(url_, username_, password_, insecure=True, **kwargs):
+
+def init(url, username, password, **kwargs):
     """
     Create connection to engine
 
     Args:
-        url_ (str): oVirt engine URL
-        username_ (str): username@domain to log in
-        password_ (str): password for the user to log in
-        insecure (bool): use insecure connection only
+        url (str): oVirt engine URL
+        username (str): username@domain to log in
+        password (str): password for the user to log in
+
+    Kwargs:
+        http://ovirt.github.io/ovirt-engine-sdk/master/#ovirtsdk4.Connection.__init__
     """
-    global con, engine_api_url, username, password
-    engine_api_url = url_
-    username = username_
-    password = password_
+    global con, con_params
+    con_params['url'] = url
+    con_params['username'] = username
+    con_params['password'] = password
+    con_params.update(kwargs)
 
     if con and con.test():
         return
 
-    con = ovirtsdk4.Connection(
-        url=engine_api_url,
-        username=username,
-        password=password,
-        insecure=insecure,
-        debug=True,
-        log=logger,
-        **kwargs
-    )
+    con = ovirtsdk4.Connection(**con_params)
 
 
 def system_service(*args, **kwargs):
@@ -50,9 +52,9 @@ def system_service(*args, **kwargs):
     Returns:
         obj: system_service object
     """
-    global con, engine_api_url, username, password
+    global con, con_params
     if not con or not con.test():
-        init(engine_api_url, username, password)
+        init(**con_params)
     return con.system_service(*args, **kwargs)
 
 
