@@ -1,3 +1,5 @@
+This is currently discontinued, we might reopen it in the future.
+
 # ovirt-sdk-helpers
 
 This repository should serve as python-sdk for oVirt, it is using existing oVirt-engine-sdk python wrapper for REST API and extending it functionality to usable format
