@@ -1,7 +1,12 @@
+import ovirtsdk4
+
 import ovirt_sdk_helpers as osh
 
+HOST_TIMEOUT = 600
+HOST_SLEEP = 10
 CHECK_UPGRADE_TIMEOUT = 180
 CHECK_UPGRADE_SLEEP = 5
+HOST_INSTALL_TIMEOUT = 800
 HOST_UPGRADE_CHECK_FINISHED = "Check for available updates on host"
 HOST_UPGRADE_CHECK_FAILED = "Failed to check for available updates"
 
@@ -27,7 +32,10 @@ def get_obj_by_name(host_name, **kwargs):
     Returns:
         ovirtsdk4.types.Host: host object
     """
-    return service().list(search="name={}".format(host_name), **kwargs)[0]
+    try:
+        return service().list(search="name={}".format(host_name), **kwargs)[0]
+    except IndexError:
+        return None
 
 
 def get_obj_list(**kwargs):
@@ -55,6 +63,105 @@ def host_service(host_name):
     """
     host = get_obj_by_name(host_name)
     return service().host_service(host.id)
+
+
+def wait_for_hosts_states(
+    names, state=ovirtsdk4.types.HostStatus.UP,
+    timeout=HOST_TIMEOUT, sleep=HOST_SLEEP
+):
+    """
+    Wait until all of the hosts identified by names exist and have the desired
+    status declared in states.
+
+    Args:
+        names (str or list): A comma separated names (or a list) of the hosts
+        state (str): A state of the hosts to wait for
+        timeout (int): Timeout for sampler
+        sleep (int): Time to sleep between host status queries
+
+    Returns:
+        bool: True if hosts are in states, False otherwise.
+    """
+    if isinstance(names, str):
+        names = names.split(",")
+    for host in names:
+        if not osh.general.wait_for_state(
+            timeout, sleep, state, get_obj_by_name, host
+        ):
+            return False
+    return True
+
+
+def add(
+    name, address, root_password, cluster, wait=True,
+    deploy_hosted_engine=False, **kwargs
+):
+    """
+    Add new host
+
+    Args:
+        name (str): Host name
+        address (str): Host FQDN or IP
+        root_password (str): Host root password
+        cluster (str): Host cluster name
+        wait (bool): Wait until the host will have state UP
+        deploy_hosted_engine (bool): Deploy hosted engine flag
+
+    Keyword Args:
+        http://ovirt.github.io/ovirt-engine-sdk/master/types.m.html#ovirtsdk4.types.Host
+
+    Returns:
+        bool: True, if add action succeeds, otherwise False
+    """
+    service().add(
+        ovirtsdk4.types.Host(
+            name=name, address=address, root_password=root_password,
+            cluster=ovirtsdk4.types.Cluster(name=cluster), **kwargs
+        ),
+        deploy_hosted_engine=deploy_hosted_engine
+    )
+
+    if wait:
+        return wait_for_hosts_states(name, timeout=HOST_INSTALL_TIMEOUT)
+    return True
+
+
+def update(name_, **kwargs):
+    """
+    Update properties of a host
+
+    Args:
+        name_ (str): Name of a target host
+
+    Keyword Arguments:
+        http://ovirt.github.io/ovirt-engine-sdk/master/types.m.html#ovirtsdk4.types.Host
+    """
+    host_service(name_).update(ovirtsdk4.types.Host(**kwargs))
+
+
+def remove(name, deactivate=False):
+    """
+    Remove existing host
+
+    Args:
+        name (str): Name of a host to be removed
+        deactivate (bool): Flag to put host in maintenance before remove
+
+    Returns:
+        bool: If the host was removed correctly
+    """
+    _host_service = host_service(name)
+    if deactivate:
+        _host_service.deactivate()
+        if not wait_for_hosts_states(
+            name, state=ovirtsdk4.types.HostStatus.MAINTENANCE
+        ):
+            return False
+
+    _host_service.remove()
+    if get_obj_by_name(name):
+        return False
+    return True
 
 
 def is_upgrade_available(host_name):
@@ -126,7 +233,9 @@ def check_for_upgrade(host_name, wait=False):
     return True
 
 
-def upgrade(host_name, image=None, async=False, reboot=True, **kwargs):
+def upgrade(
+    host_name, image=None, async=False, reboot=True, **kwargs  # noqa: W606
+):
     """
     Upgrade host
 
@@ -143,6 +252,6 @@ def upgrade(host_name, image=None, async=False, reboot=True, **kwargs):
 
     if host.update_available:
         host_service(host_name).upgrade(
-            async=async, image=image, reboot=reboot, **kwargs
+            async=async, image=image, reboot=reboot, **kwargs  # noqa: W606
         )
     return True
